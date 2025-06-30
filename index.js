@@ -1,7 +1,7 @@
-import express from 'express';
-import youtubedl from 'youtube-dl-exec';
-import path from 'path';
-import cors from 'cors';
+const express = require('express');
+const youtubedl = require('youtube-dl-exec');
+const path = require('path');
+const cors = require('cors');
 
 const app = express();
 const port = 3000;
