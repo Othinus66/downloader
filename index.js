@@ -1,74 +1,53 @@
-const express = require('express');
-const youtubedl = require('youtube-dl-exec');
-const path = require('path');
-const cors = require('cors');
+import express from 'express';
+import { ytmp3, ytmp4, ttdl, igdl, ytsearch, fbdl } from 'ruhend-scraper';
+import cors from 'cors';
 
 const app = express();
 const port = 3000;
 
 app.use(express.json());
-app.use(cors());
+app.use(express.urlencoded({ extended: true }));
+app.use(cors())
 
-/**
- * Map user-defined quality to youtube-dl format selector
- */
+app.post('/', async (req, res) => {
+  const { url, type} = req.body;
 
-function mapQualityToFormat(quality) {
-  switch (quality) {
-    case 'audio':
-      return 'bestaudio';
-    case '360p':
-      return 'bestvideo[height<=360]+bestaudio/best[height<=360]';
-    case '480p':
-      return 'bestvideo[height<=480]+bestaudio/best[height<=480]';
-    case '720p':
-      return 'bestvideo[height<=720]+bestaudio/best[height<=720]';
-    case '1080p':
-      return 'bestvideo[height<=1080]+bestaudio/best[height<=1080]';
-    default:
-      return 'best'; 
+  if (!url) {
+    return res.status(400).json({ error: 'URL is required' });
   }
-}
-
-app.post('/download', async (req, res) => {
-  const { url, format, quality, outputPath } = req.body;
-
-  console.log('Received request:', req.body);
-
-  if (!url || !format || !quality || !outputPath) {
-    return res.status(400).json({ error: 'Missing url, format, quality, or outputPath' });
-  }
-
-  const filename = `video-${Date.now()}.${format}`;
-  const fullOutputPath = path.join(outputPath, filename);
-
-  const formatSelector = mapQualityToFormat(quality);
 
   try {
-    const result = await youtubedl(url, {
-      output: fullOutputPath,
-      format: formatSelector,
-      mergeOutputFormat: format, 
-      noCheckCertificates: true,
-      noWarnings: true,
-      preferFreeFormats: true,
-      addHeader: [
-        'referer:youtube.com',
-        'user-agent:Mozilla/5.0',
-      ],
-    });
+    let data;
+    switch (type) {
+      case 'ytmp3':
+        data = await ytmp3(url);
+        break;
+      case 'ytmp4':
+        data = await ytmp4(url);
+        break;
+      case 'ttdl':
+        data = await ttdl(url);
+        break;
+      case 'igdl':
+        data = await igdl(url);
+        break;
+      case 'ytsearch':
+        data = await ytsearch(url);
+        break;
+      case 'fbdl':
+        data = await fbdl(url);
+        break;
+      default:
+        return res.status(400).json({ error: 'Invalid type specified' });
+    }
 
-    return res.status(200).json({
-      message: 'Download started',
-      path: fullOutputPath,
-      result,
-    });
+    res.json(data);
   } catch (error) {
-    console.error('Download error:', error);
-    return res.status(500).json({ error: 'Failed to download video' });
+    console.error('Error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch MP3 data' });
   }
 });
 
 app.listen(port, () => {
-  console.log(`YouTube downloader API listening at http://localhost:${port}`);
+  console.log(`Server running on http://localhost:${port}`);
 });
